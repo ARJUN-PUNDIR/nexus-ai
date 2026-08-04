@@ -13,7 +13,7 @@ Today's objective:
 from langchain_ollama import ChatOllama
 
 from app.config.settings import OLLAMA_MODEL
-
+print("Hello Arjun")
 
 def main():
     """
