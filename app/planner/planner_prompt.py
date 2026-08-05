@@ -13,6 +13,8 @@ Break the user's research request into
 Return ONLY the search queries.
 
 One query per line.
+- Do not explain anything.
+
 """
         ),
 

@@ -7,38 +7,52 @@ Research Pipeline
 
 from app.chains.research_pipeline import research_pipeline
 from app.services.report_service import save_report
+from app.planner.planner_chain import planner_chain
 
 def main():
-
-    print("=" * 50)
-    print("              NEXUS AI")
-    print("=" * 50)
+    
 
     query = input("\nEnter Research Query : ")
 
-    try:
+    plan = planner_chain.invoke(
+        {
+            "query": query
+        }
+    )
 
-        response = research_pipeline.invoke(query)
+    print("\n========== RESEARCH PLAN ==========\n")
 
-        print("\n========== RESEARCH RESPONSE ==========\n")
+    print(plan)
 
-        print(response)
+    # print("=" * 50)
+    # print("              NEXUS AI")
+    # print("=" * 50)
 
-        print("\n=======================================\n")
-        saved_file = save_report(
-        query=query,
-        report=response
-        )
+    # query = input("\nEnter Research Query : ")
 
-        print(f"\nReport saved successfully!")
+    # try:
 
-        print(saved_file)
+    #     response = research_pipeline.invoke(query)
 
-    except ValueError as error:
+    #     print("\n========== RESEARCH RESPONSE ==========\n")
 
-        print("Something went wrong while generating the research report.\n")
+    #     print(response)
 
-        print(f"Reason: {error}")
+    #     print("\n=======================================\n")
+    #     saved_file = save_report(
+    #     query=query,
+    #     report=response
+    #     )
+
+    #     print(f"\nReport saved successfully!")
+
+    #     print(saved_file)
+
+    # except ValueError as error:
+
+    #     print("Something went wrong while generating the research report.\n")
+
+    #     print(f"Reason: {error}")
 
 
 if __name__ == "__main__":
