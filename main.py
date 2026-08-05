@@ -101,7 +101,9 @@ def main():
 
     except ValueError as error:
 
-        print(f"\nError : {error}")
+        print("Something went wrong while generating the research report.\n")
+
+        print(f"Reason: {error}")
 
 
 if __name__ == "__main__":
