@@ -71,7 +71,7 @@ Research Pipeline
 """
 
 from app.chains.research_pipeline import research_pipeline
-
+from app.services.report_service import save_report
 
 def main():
 
@@ -90,6 +90,14 @@ def main():
         print(response)
 
         print("\n=======================================\n")
+        saved_file = save_report(
+        query=query,
+        report=response
+        )
+
+        print(f"\nReport saved successfully!")
+
+        print(saved_file)
 
     except ValueError as error:
 

@@ -18,9 +18,12 @@ def build_context(query: str):
     }
     )
 
-    formatted_context = format_search_results(results)
-
+    formatted_context, sources = format_search_results(results)
     return {
-        "query": query,
-        "context": formatted_context
+    
+    "query": query,
+
+    "context": formatted_context,
+
+    "sources": sources
     }

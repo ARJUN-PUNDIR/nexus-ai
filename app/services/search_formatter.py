@@ -1,18 +1,17 @@
 """
 Search Formatter
-
-Converts Tavily response
-into clean context.
 """
 
 
 def format_search_results(results):
 
-    formatted_text = ""
+    formatted_context = ""
+
+    sources = []
 
     for index, result in enumerate(results["results"], start=1):
 
-        formatted_text += f"""
+        formatted_context += f"""
 Source {index}
 
 Title:
@@ -21,11 +20,10 @@ Title:
 Content:
 {result['content']}
 
-URL:
-{result['url']}
-
 ----------------------------------------
 
 """
 
-    return formatted_text
+        sources.append(result["url"])
+
+    return formatted_context, sources
