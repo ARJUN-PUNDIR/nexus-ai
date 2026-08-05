@@ -4,20 +4,16 @@ Web Search Tool
 Uses Tavily Search API.
 """
 
-from langchain_core.tools import tool
-from tavily import TavilyClient
-from app.config.settings import TAVILY_API_KEY
-client = TavilyClient(api_key=TAVILY_API_KEY)
+from langchain_tavily import TavilySearch
 
-@tool
-def web_search(query: str) -> str:
-    """
-    Search the web and return relevant information.
-    """
+from app.config.settings import (
+    TAVILY_API_KEY,
+    MAX_SEARCH_RESULTS,
+)
 
-    response = client.search(
-        query=query,
-        max_results=1
-    )
 
-    return (response)
+web_search = TavilySearch(
+    max_results=MAX_SEARCH_RESULTS,
+    topic="general",
+    tavily_api_key=TAVILY_API_KEY,
+)

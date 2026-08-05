@@ -1,31 +1,47 @@
 """
-Project Configuration
-
-This file stores all configurable values used across the project.
-
-If a configuration changes in the future (for example changing
-the LLM model), we only update this file.
-"""
-
-"""
-Project Configuration
+Application Settings
 """
 
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
+# ---------------------------------------------------------
+# LLM
+# ---------------------------------------------------------
 
-TEMPERATURE = float(
-    os.getenv("TEMPERATURE", "0")
+OLLAMA_MODEL = os.getenv(
+    "OLLAMA_MODEL",
+    "qwen3:4b"
 )
 
-APP_NAME = os.getenv(
-    "APP_NAME",
-    "Nexus AI"
+OLLAMA_BASE_URL = os.getenv(
+    "OLLAMA_BASE_URL",
+    "http://localhost:11434"
 )
+
+# ---------------------------------------------------------
+# Tavily
+# ---------------------------------------------------------
+
 TAVILY_API_KEY = os.getenv(
     "TAVILY_API_KEY"
 )
+
+# ---------------------------------------------------------
+# Research
+# ---------------------------------------------------------
+
+MAX_SEARCH_RESULTS = 3
+
+MAX_PLANNER_QUERIES = 3
+
+TEMPERATURE = 0
+
+# ---------------------------------------------------------
+# Report
+# ---------------------------------------------------------
+
+REPORT_FOLDER = "reports"

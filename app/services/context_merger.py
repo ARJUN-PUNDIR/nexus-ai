@@ -1,29 +1,32 @@
 """
-Context Merger
-
-Combines multiple Tavily search results
-into one clean context.
+Context Merger Service
 """
 
-from app.services.search_formatter import format_search_results
+from .search_formatter import (
+    format_search_results,
+)
 
 
-def merge_search_results(results: dict) -> str:
-    """
-    Merge all Tavily responses into one context.
-    """
+def merge_results(
+    search_results: dict,
+) -> str:
 
     merged_context = ""
 
-    for search_name, search_result in results.items():
+    for search_name, result in search_results.items():
 
-        merged_context += f"\n{'=' * 60}\n"
-        merged_context += f"{search_name.upper()}\n"
-        merged_context += f"{'=' * 60}\n\n"
+        merged_context += f"""
 
-        formatted_context, _ = format_search_results(search_result)
+{"=" * 60}
 
-        merged_context += formatted_context
-        merged_context += "\n"
+{search_name.upper()}
+
+{"=" * 60}
+
+"""
+
+        merged_context += format_search_results(
+            result
+        )
 
     return merged_context

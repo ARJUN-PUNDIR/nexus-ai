@@ -1,43 +1,44 @@
 """
 Report Service
-
-Responsible for saving research reports.
 """
 
 from pathlib import Path
 from datetime import datetime
 
+from app.config.settings import (
+    REPORT_FOLDER,
+)
 
-def save_report(query: str, report: str):
 
-    # Reports folder
-    reports_folder = Path("reports")
+def save_report(
+    report: str,
+    query: str,
+) -> str:
 
-    reports_folder.mkdir(exist_ok=True)
+    reports_dir = Path(REPORT_FOLDER)
 
-    # File name using current date & time
-    filename = datetime.now().strftime(
-        "research_%Y%m%d_%H%M%S.md"
+    reports_dir.mkdir(
+        exist_ok=True
     )
 
-    report_file = reports_folder / filename
-
-    content = f"""# Nexus AI Research Report
-
-## Research Query
-
-{query}
-
----
-
-## Report
-
-{report}
-"""
-
-    report_file.write_text(
-        content,
-        encoding="utf-8"
+    timestamp = datetime.now().strftime(
+        "%Y%m%d_%H%M%S"
     )
 
-    return report_file
+    filename = f"research_{timestamp}.md"
+
+    filepath = reports_dir / filename
+
+    with open(
+        filepath,
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        file.write(
+            f"# {query}\n\n"
+        )
+
+        file.write(report)
+
+    return str(filepath)

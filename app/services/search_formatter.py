@@ -1,29 +1,34 @@
 """
-Search Formatter
+Search Formatter Service
 """
 
 
-def format_search_results(results):
+def format_search_results(
+    results: dict,
+) -> str:
 
-    formatted_context = ""
+    formatted = ""
 
-    sources = []
+    for index, result in enumerate(
+        results["results"],
+        start=1,
+    ):
 
-    for index, result in enumerate(results["results"], start=1):
+        formatted += f"""
 
-        formatted_context += f"""
 Source {index}
 
 Title:
-{result['title']}
+{result["title"]}
 
 Content:
-{result['content']}
+{result["content"]}
 
-----------------------------------------
+URL:
+{result["url"]}
+
+{"-" * 60}
 
 """
 
-        sources.append(result["url"])
-
-    return formatted_context, sources
+    return formatted
