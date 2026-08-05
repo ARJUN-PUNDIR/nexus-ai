@@ -1,29 +1,55 @@
 """
 Research Service
-
-Responsible for preparing
-research context.
-service isko prompt ke form mai bhi convert kar rhi hai 
 """
 
-from app.tools.web_search import web_search
-from app.services.search_formatter import format_search_results
-from app.services.query_optimizer import optimize_query
-def build_context(query: str):
-    optimized_query = optimize_query(query)
+from app.planner.planner_chain import planner_chain
+from app.planner.planner_parser import parse_plan
 
-    results = web_search.invoke(
-    {
-        "query": query
-    }
+from app.services.parallel_search import (
+    build_parallel_search,
+)
+
+from app.services.context_merger import (
+    merge_search_results,
+)
+
+
+def build_context(query: str) -> str:
+    """
+    Complete research pipeline.
+
+    Query
+        ↓
+    Planner
+        ↓
+    Parallel Search
+        ↓
+    Context Merger
+    """
+
+    # Step 1
+    plan = planner_chain.invoke(
+        {
+            "query": query
+        }
     )
 
-    formatted_context, sources = format_search_results(results)
-    return {
-    
-    "query": query,
+    print("\n========== RESEARCH PLAN ==========\n")
+    print(plan)
 
-    "context": formatted_context,
+    # Step 2
+    search_queries = parse_plan(plan)
 
-    "sources": sources
-    }
+    # Step 3
+    parallel = build_parallel_search(
+        search_queries
+    )
+
+    search_results = parallel.invoke(None)
+
+    # Step 4
+    merged_context = merge_search_results(
+        search_results
+    )
+
+    return merged_context

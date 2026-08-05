@@ -1,13 +1,17 @@
-from langchain_ollama import ChatOllama
-from langchain_core.output_parsers import StrOutputParser
+"""
+Planner Chain
+"""
 
-from app.config.settings import (
-    OLLAMA_MODEL,
-    TEMPERATURE
-)
+from langchain_ollama import ChatOllama
+
+from app.config.settings import OLLAMA_MODEL
 
 from app.planner.planner_prompt import (
     planner_prompt
+)
+
+from app.planner.planner_schema import (
+    ResearchPlan
 )
 
 planner_chain = (
@@ -17,15 +21,10 @@ planner_chain = (
     |
 
     ChatOllama(
-
         model=OLLAMA_MODEL,
-
-        temperature=TEMPERATURE
-
+        temperature=0
+    ).with_structured_output(
+        ResearchPlan
     )
-
-    |
-
-    StrOutputParser()
 
 )
