@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
 
 TEMPERATURE = float(
     os.getenv("TEMPERATURE", "0")

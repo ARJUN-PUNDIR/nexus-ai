@@ -17,7 +17,7 @@ def web_search(query: str) -> str:
 
     response = client.search(
         query=query,
-        max_results=3
+        max_results=1
     )
 
-    return str(response)
+    return (response)

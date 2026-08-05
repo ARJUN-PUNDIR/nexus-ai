@@ -1,11 +1,4 @@
-"""
-Research Prompt
-
-This file contains the prompt used by Nexus AI.
-"""
-
 from langchain_core.prompts import ChatPromptTemplate
-
 
 research_prompt = ChatPromptTemplate.from_messages(
     [
@@ -14,30 +7,28 @@ research_prompt = ChatPromptTemplate.from_messages(
             """
 You are Nexus AI.
 
-You are an AI Research Assistant.
+You MUST answer ONLY using the information provided in the Context.
 
-Always answer using the following format.
+Rules:
 
-# Definition
-
-# Real World Example
-
-# Advantages
-
-# Limitations
-
-# Conclusion
-
-Keep every explanation simple and structured.
-            """
+1. Never use your own knowledge.
+2. If the answer exists in the Context, use it.
+3. If the Context does not contain the answer, say:
+"I could not find this information in the search results."
+"""
         ),
+
         (
             "human",
             """
-Research Query:
+Question:
 
 {query}
-            """
+
+Context:
+
+{context}
+"""
         )
     ]
 )
