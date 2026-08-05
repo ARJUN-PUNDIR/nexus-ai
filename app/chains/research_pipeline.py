@@ -1,5 +1,5 @@
 from app.utils.runnables import query_validator, query_mapper
-
+from app.utils.runnables import context_builder
 from app.prompts.research_prompt import research_prompt
 
 from langchain_ollama import ChatOllama
@@ -19,9 +19,23 @@ llm = ChatOllama(
 parser = StrOutputParser()
 
 research_pipeline = (
+
     query_validator
-    | query_mapper
-    | research_prompt
-    | llm
-    | parser
+
+    |
+
+    context_builder
+
+    |
+
+    research_prompt
+
+    |
+
+    llm
+
+    |
+
+    parser
+
 )
