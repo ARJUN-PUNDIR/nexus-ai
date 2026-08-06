@@ -1,68 +1,27 @@
 """
 Research Manager
-
-Coordinates the complete research workflow.
 """
 
-from app.agents.planner import PlannerAgent
-from app.agents.research import ResearchAgent
-from app.agents.writer import WriterAgent
-from app.services.router import router
+from app.agents import ResearchAgent
 from app.services import save_report
-
-from app.models import (
-    ResearchReport,
-)
 
 
 class ResearchManager:
 
-    """
-    Main orchestrator of Nexus AI.
-    """
-
     def __init__(self):
 
-        self.planner = PlannerAgent()
-
-        self.research = ResearchAgent()
-
-        self.writer = WriterAgent()
+        self.agent = ResearchAgent()
 
     def run(
         self,
         query: str,
-    ) -> ResearchReport:
+    ) -> str:
 
-        # -----------------------------
-        # Step 1 : Decide Route
-        # -----------------------------
+        report = self.agent.run(query)
 
-        route = router.invoke(query)
+        save_report(
+            report=report,
+            query=query,
+        )
 
-        # -----------------------------
-        # Step 2 : Research Path
-        # -----------------------------
-
-        if route["search"]:
-
-            plan = self.planner.plan(query)
-
-            context = self.research.research(
-                plan=plan,
-                query=query,
-            )
-
-            report = self.writer.write(
-                context
-            )
-
-        # -----------------------------
-        # Step 3 : Direct LLM Path
-        # -----------------------------
-
-        else:
-
-            report = self.writer.write_direct(
-            query
-            )
+        return report

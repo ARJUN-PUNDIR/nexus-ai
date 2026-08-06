@@ -1,7 +1,3 @@
-"""
-Research Agent Package
-"""
-
 from .research_agent import ResearchAgent
 
 __all__ = [

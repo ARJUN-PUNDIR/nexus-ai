@@ -36,22 +36,16 @@ def main():
 
             report = manager.run(query)
 
-            print("\n")
+            print()
             print("=" * 60)
             print("FINAL REPORT")
             print("=" * 60)
-
-            print(report.report)
-
-            print("\n")
-            print("=" * 60)
-            print(f"Sources Used : {report.sources}")
+            print(report)
             print("=" * 60)
 
         except Exception as error:
 
             print("\nAn error occurred.\n")
-
             print(error)
 
 

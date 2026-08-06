@@ -1,49 +1,48 @@
 """
 Research Agent
+
+Modern LangChain Agent
 """
 
-from app.models import (
-    ResearchPlan,
-    ResearchContext,
+from langchain.agents import create_agent
+from langchain_ollama import ChatOllama
+
+from app.prompts import SYSTEM_PROMPT
+from app.config.settings import (
+    OLLAMA_MODEL,
+    OLLAMA_BASE_URL,
+    TEMPERATURE,
 )
 
-from app.services import (
-    build_parallel_search,
-    merge_results,
+llm = ChatOllama(
+    model=OLLAMA_MODEL,
+    base_url=OLLAMA_BASE_URL,
+    temperature=TEMPERATURE,
 )
+
+agent = create_agent(
+    model=llm,
+    tools=[],
+    system_prompt=SYSTEM_PROMPT,
+)
+
 
 class ResearchAgent:
 
-    """
-    Responsible for collecting
-    information from the web.
-    """
-
-    def research(
+    def run(
         self,
-        plan: ResearchPlan,
         query: str,
-    ) -> ResearchContext:
+    ) -> str:
 
-        parallel = build_parallel_search(
-            plan.queries
+        response = agent.invoke(
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": query,
+                    }
+                ]
+            }
         )
 
-        search_results = parallel.invoke(
-            None
-        )
-
-        merged_context = merge_results(
-            search_results
-        )
-
-        return ResearchContext(
-
-            query=query,
-
-            search_queries=plan.queries,
-            raw_results=search_results,
-
-            merged_context=merged_context,
-
-        )
+        return response["messages"][-1].content

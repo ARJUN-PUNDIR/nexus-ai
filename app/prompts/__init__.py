@@ -1,11 +1,7 @@
-"""
-Application Prompts
-"""
-
-from .planner_prompt import planner_prompt
-from .writer_prompt import writer_prompt
+from .system_prompt import SYSTEM_PROMPT
 
 __all__ = [
-    "planner_prompt",
-    "writer_prompt",
+
+    "SYSTEM_PROMPT",
+
 ]
