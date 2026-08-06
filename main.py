@@ -34,13 +34,13 @@ def main():
 
         try:
 
-            report = manager.run(query)
+            answer = manager.run(query)
 
             print()
             print("=" * 60)
-            print("FINAL REPORT")
+            print("FINAL RESPONSE")
             print("=" * 60)
-            print(report)
+            print(answer)
             print("=" * 60)
 
         except Exception as error:

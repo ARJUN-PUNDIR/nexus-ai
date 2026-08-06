@@ -2,12 +2,14 @@
 Application Models
 """
 
-from .research_plan import ResearchPlan
-from .research_context import ResearchContext
-from .research_report import ResearchReport
+from .schemas import (
+    SearchResultItem,
+    ResearchPlan,
+    ResearchReport,
+)
 
 __all__ = [
+    "SearchResultItem",
     "ResearchPlan",
-    "ResearchContext",
     "ResearchReport",
 ]

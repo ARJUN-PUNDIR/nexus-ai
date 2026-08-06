@@ -1,7 +1,5 @@
 """
 Nexus AI Workflow
-
-LangGraph Execution Pipeline
 """
 
 from langgraph.graph import (
@@ -31,11 +29,10 @@ def research_node(
 
     return {
         "messages": [
-            *state["messages"],
             {
                 "role": "assistant",
                 "content": answer,
-            },
+            }
         ]
     }
 

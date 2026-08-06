@@ -1,3 +1,7 @@
+"""
+Application Agents
+"""
+
 from .research import ResearchAgent
 
 __all__ = [

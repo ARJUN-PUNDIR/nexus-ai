@@ -2,43 +2,24 @@
 Research Manager
 """
 
-from app.graph import graph
+from app.agents import ResearchAgent
 
 
 class ResearchManager:
+
+    def __init__(self):
+
+        self.agent = ResearchAgent()
+
+        # One session for now
+        self.thread_id = "user_1"
 
     def run(
         self,
         query: str,
     ) -> str:
 
-        result = graph.invoke(
-
-            {
-
-                "messages":[
-
-                    {
-
-                        "role":"user",
-
-                        "content":query,
-
-                    }
-
-                ]
-
-            },
-
-            config={
-
-                "configurable":{
-
-                    "thread_id":"user_1",
-
-                }
-
-            }
-
+        return self.agent.run(
+            query=query,
+            thread_id=self.thread_id,
         )
-        return result["messages"][-1]["content"]

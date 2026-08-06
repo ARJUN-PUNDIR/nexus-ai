@@ -6,6 +6,7 @@ Modern LangChain Agent
 
 from langchain.agents import create_agent
 from langchain_ollama import ChatOllama
+from langgraph.checkpoint.memory import InMemorySaver
 
 from app.prompts import SYSTEM_PROMPT
 from app.config.settings import (
@@ -22,6 +23,7 @@ llm = ChatOllama(
     temperature=TEMPERATURE,
 )
 
+memory = InMemorySaver()
 
 agent = create_agent(
     model=llm,
@@ -29,6 +31,7 @@ agent = create_agent(
         web_search_tool,
     ],
     system_prompt=SYSTEM_PROMPT,
+    checkpointer=memory,
 )
 
 
@@ -36,22 +39,26 @@ class ResearchAgent:
 
     def run(
         self,
-        messages: list,
+        query: str,
+        thread_id: str,
     ) -> str:
 
-        print("\n" + "=" * 60)
-        print("MESSAGES RECEIVED")
-        print("=" * 60)
-
-        for msg in messages:
-            print(msg)
-
-        print("=" * 60)
+        config = {
+            "configurable": {
+                "thread_id": thread_id,
+            }
+        }
 
         response = agent.invoke(
             {
-                "messages": messages,
-            }
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": query,
+                    }
+                ]
+            },
+            config=config,
         )
 
         print("\n========== RAW RESPONSE ==========\n")
