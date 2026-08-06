@@ -1,5 +1,7 @@
 """
-LangGraph Workflow
+Nexus AI Workflow
+
+LangGraph Execution Pipeline
 """
 
 from langgraph.graph import (
@@ -8,123 +10,53 @@ from langgraph.graph import (
     END,
 )
 
+from langgraph.checkpoint.memory import MemorySaver
+
 from app.graph.state import AgentState
 from app.agents import ResearchAgent
-from app.memory import conversation
 
 
-agent = ResearchAgent()
+memory = MemorySaver()
+
+research_agent = ResearchAgent()
 
 
-def agent_node(
+def research_node(
     state: AgentState,
-):
+) -> AgentState:
 
-    messages = [
-
-        *state["history"],
-
-        *state["messages"],
-
-    ]
-
-    query = messages[-1]["content"]
-
-
-    answer = agent.run(query)
-
-    return {
-
-        "messages": [
-
-            *state["messages"],
-
-            {
-
-                "role": "assistant",
-
-                "content": answer,
-
-            }
-
-        ]
-
-    }
-
-
-def load_memory_node(
-    state: AgentState,
-):
-
-    return {
-
-        "history": conversation,
-
-        "messages": state["messages"],
-
-    }
-
-
-
-def save_memory_node(
-    state: AgentState,
-):
-
-    conversation.extend(
-
+    answer = research_agent.run(
         state["messages"]
-
     )
-    print()
 
-    print("="*60)
-
-    print("MEMORY")
-
-    print("="*60)
-
-    print(conversation)
-
-    print("="*60)
-
-    return state
+    return {
+        "messages": [
+            *state["messages"],
+            {
+                "role": "assistant",
+                "content": answer,
+            },
+        ]
+    }
 
 
 builder = StateGraph(AgentState)
 
 builder.add_node(
-    "load_memory",
-    load_memory_node,
-)
-
-builder.add_node(
-    "agent",
-    agent_node,
-)
-
-builder.add_node(
-    "save_memory",
-    save_memory_node,
+    "research",
+    research_node,
 )
 
 builder.add_edge(
     START,
-    "load_memory",
+    "research",
 )
 
 builder.add_edge(
-    "load_memory",
-    "agent",
-)
-
-builder.add_edge(
-    "agent",
-    "save_memory",
-)
-
-builder.add_edge(
-    "save_memory",
+    "research",
     END,
 )
 
-graph = builder.compile()
+graph = builder.compile(
+    checkpointer=memory,
+)

@@ -13,14 +13,32 @@ class ResearchManager:
     ) -> str:
 
         result = graph.invoke(
-            {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": query,
-                    }
-                ]
-            }
-        )
 
+            {
+
+                "messages":[
+
+                    {
+
+                        "role":"user",
+
+                        "content":query,
+
+                    }
+
+                ]
+
+            },
+
+            config={
+
+                "configurable":{
+
+                    "thread_id":"user_1",
+
+                }
+
+            }
+
+        )
         return result["messages"][-1]["content"]

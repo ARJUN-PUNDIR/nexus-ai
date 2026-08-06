@@ -14,17 +14,20 @@ from app.config.settings import (
     TEMPERATURE,
 )
 from app.tools import web_search_tool
+
+
 llm = ChatOllama(
     model=OLLAMA_MODEL,
     base_url=OLLAMA_BASE_URL,
     temperature=TEMPERATURE,
 )
 
+
 agent = create_agent(
     model=llm,
     tools=[
-    web_search_tool,
-],
+        web_search_tool,
+    ],
     system_prompt=SYSTEM_PROMPT,
 )
 
@@ -33,17 +36,21 @@ class ResearchAgent:
 
     def run(
         self,
-        query: str,
+        messages: list,
     ) -> str:
+
+        print("\n" + "=" * 60)
+        print("MESSAGES RECEIVED")
+        print("=" * 60)
+
+        for msg in messages:
+            print(msg)
+
+        print("=" * 60)
 
         response = agent.invoke(
             {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": query,
-                    }
-                ]
+                "messages": messages,
             }
         )
 
