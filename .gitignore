@@ -31,3 +31,17 @@ reports/
 # VS Code
 # ------------------------
 .vscode/
+
+__pycache__/
+
+.env
+
+reports/
+
+*.pyc
+
+.DS_Store
+
+.vscode/
+
+.idea/

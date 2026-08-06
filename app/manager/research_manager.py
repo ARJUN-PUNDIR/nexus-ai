@@ -17,11 +17,27 @@ class ResearchManager:
         query: str,
     ) -> str:
 
-        report = self.agent.run(query)
+        try:
 
-        save_report(
-            report=report,
-            query=query,
-        )
+            report = self.agent.run(query)
+
+        except Exception as e:
+
+            raise RuntimeError(
+                f"Research Agent Failed : {e}"
+            )
+
+        try:
+
+            save_report(
+                report=report,
+                query=query,
+            )
+
+        except Exception as e:
+
+            raise RuntimeError(
+                f"Report Saving Failed : {e}"
+            )
 
         return report
