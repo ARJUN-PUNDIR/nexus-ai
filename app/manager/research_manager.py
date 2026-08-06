@@ -7,7 +7,7 @@ Coordinates the complete research workflow.
 from app.agents.planner import PlannerAgent
 from app.agents.research import ResearchAgent
 from app.agents.writer import WriterAgent
-
+from app.services.router import router
 from app.services import save_report
 
 from app.models import (
@@ -35,33 +35,44 @@ class ResearchManager:
     ) -> ResearchReport:
 
         # -----------------------------
-        # Step 1
+        # Step 1 : Decide Route
         # -----------------------------
 
-        plan = self.planner.plan(
-            query
-        )
+        route = router.invoke(query)
 
         # -----------------------------
-        # Step 2
+        # Step 2 : Research Path
         # -----------------------------
 
-        context = self.research.research(
-            plan=plan,
-            query=query,
-        )
+        if route["search"]:
+
+            plan = self.planner.plan(query)
+
+            context = self.research.research(
+                plan=plan,
+                query=query,
+            )
+
+            report = self.writer.write(
+                context
+            )
 
         # -----------------------------
-        # Step 3
+        # Step 3 : Direct LLM Path
         # -----------------------------
 
-        report = self.writer.write(
-            context
-        )
+        else:
 
-        # -----------------------------
-        # Step 4
-        # -----------------------------
+            plan = self.planner.plan(query)
+
+            context = self.research.research(
+                plan=plan,
+                query=query,
+            )
+
+            report = self.writer.write(
+                context
+            )
 
         save_report(
             report=report.report,
