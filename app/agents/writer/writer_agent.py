@@ -47,3 +47,24 @@ class WriterAgent:
         sources=source_count,
 
     )
+
+
+
+    
+    def write_direct(
+    self,
+    query: str,
+) -> ResearchReport:
+
+        report = writer_chain.invoke(
+            {
+                "query": query,
+                "context": "",
+            }
+        )
+
+        return ResearchReport(
+            query=query,
+            report=report,
+            sources=0,
+        )

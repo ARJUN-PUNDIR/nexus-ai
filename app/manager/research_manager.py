@@ -63,20 +63,6 @@ class ResearchManager:
 
         else:
 
-            plan = self.planner.plan(query)
-
-            context = self.research.research(
-                plan=plan,
-                query=query,
+            report = self.writer.write_direct(
+            query
             )
-
-            report = self.writer.write(
-                context
-            )
-
-        save_report(
-            report=report.report,
-            query=query,
-        )
-
-        return report

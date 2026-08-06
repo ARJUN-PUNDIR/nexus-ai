@@ -37,11 +37,15 @@ User Query:
 
 {query}
 
-
 Research Context:
 
 {context}
-            """,
+
+If the research context is empty, answer using your own knowledge.
+
+If research context is available, prefer it over your own knowledge.
+    """,
+        
         ),
     ]
 )
