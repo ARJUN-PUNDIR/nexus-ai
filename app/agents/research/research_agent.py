@@ -13,7 +13,7 @@ from app.config.settings import (
     OLLAMA_BASE_URL,
     TEMPERATURE,
 )
-
+from app.tools import web_search_tool
 llm = ChatOllama(
     model=OLLAMA_MODEL,
     base_url=OLLAMA_BASE_URL,
@@ -22,7 +22,9 @@ llm = ChatOllama(
 
 agent = create_agent(
     model=llm,
-    tools=[],
+    tools=[
+    web_search_tool,
+],
     system_prompt=SYSTEM_PROMPT,
 )
 
@@ -44,5 +46,14 @@ class ResearchAgent:
                 ]
             }
         )
+
+        print("\n========== RAW RESPONSE ==========\n")
+
+        for message in response["messages"]:
+            print(type(message))
+            print(message)
+            print("-" * 60)
+
+        print("\n==================================\n")
 
         return response["messages"][-1].content

@@ -1,9 +1,5 @@
-"""
-External Tools
-"""
-
-from .web_search import web_search
+from .web_search import web_search_tool
 
 __all__ = [
-    "web_search",
+    "web_search_tool",
 ]
