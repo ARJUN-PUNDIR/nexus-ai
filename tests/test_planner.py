@@ -3,7 +3,7 @@ Unit tests for Autonomous Research Planner Node
 """
 
 from unittest.mock import patch, MagicMock
-from app.graph.workflow import planner_node
+from app.nodes.web_search_nodes import planner_node
 
 
 @patch("langchain_ollama.ChatOllama.invoke")

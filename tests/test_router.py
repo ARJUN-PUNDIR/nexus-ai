@@ -3,7 +3,7 @@ Unit tests for LLM-as-a-Router Edge
 """
 
 from unittest.mock import patch, MagicMock
-from app.graph.workflow import route_query
+from app.nodes.direct_nodes import route_query
 
 
 @patch("langchain_ollama.ChatOllama.invoke")

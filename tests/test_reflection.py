@@ -3,7 +3,7 @@ Unit tests for Reflection Quality Control Node and Re-Search Loop Router
 """
 
 from unittest.mock import patch, MagicMock
-from app.graph.workflow import reflection_node, route_reflection
+from app.nodes.web_search_nodes import reflection_node, route_reflection
 
 
 @patch("langchain_ollama.ChatOllama.invoke")
@@ -42,6 +42,6 @@ def test_route_reflection_incomplete_triggers_research():
 def test_route_reflection_max_loops():
     state = {
         "reflection": {"is_sufficient": False},
-        "search_loop_count": 2,  # Max loops reached
+        "search_loop_count": 2,
     }
     assert route_reflection(state) == "writer"
