@@ -1,6 +1,6 @@
 """
 LangChain Document RAG Service for Nexus AI
-Handles document loading (PDF, Word, CSV, TXT), text splitting, HuggingFace embeddings, and FAISS vector index storage.
+Handles document loading (PDF, Word, CSV, TXT), text splitting, Embeddings, and FAISS vector index storage.
 """
 
 import os
@@ -13,22 +13,21 @@ from langchain_community.document_loaders import (
     CSVLoader,
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
 from app.models.schemas import SearchResultItem
+from app.config import get_embedding_model
 
 
 RAG_STORAGE_DIR = "rag_storage"
 DATA_DIR = "data"
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 _vectorstore = None
 
 
 def get_embeddings():
-    """Initializes local HuggingFace embeddings."""
-    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+    """Initializes embeddings model via central Model Factory."""
+    return get_embedding_model()
 
 
 def load_single_document(file_path: str) -> list[Any]:
@@ -45,7 +44,6 @@ def load_single_document(file_path: str) -> list[Any]:
     elif ext in [".txt", ".md"]:
         loader = TextLoader(file_path, encoding="utf-8")
     else:
-        # Fallback to TextLoader
         loader = TextLoader(file_path, encoding="utf-8")
 
     return loader.load()
@@ -53,7 +51,7 @@ def load_single_document(file_path: str) -> list[Any]:
 
 def ingest_documents_from_directory(directory_path: str = DATA_DIR) -> int:
     """
-    Ingests all files from data/ directory, chunks them, creates HuggingFace embeddings,
+    Ingests all files from data/ directory, chunks them, creates vector embeddings,
     and saves the FAISS index to disk.
     """
     global _vectorstore

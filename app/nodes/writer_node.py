@@ -4,19 +4,13 @@ Report Writer Node for Nexus AI
 
 from typing import Any
 from langchain_core.messages import SystemMessage, AIMessage
-from langchain_ollama import ChatOllama
-
 from app.graph.state import AgentState
+from app.config import get_llm
 from app.utils.memory_summarizer import prepare_summarized_messages
-from app.config.settings import OLLAMA_MODEL, OLLAMA_BASE_URL, TEMPERATURE
 
 
-# Initialize Ollama LLM
-llm = ChatOllama(
-    model=OLLAMA_MODEL,
-    base_url=OLLAMA_BASE_URL,
-    temperature=TEMPERATURE,
-)
+# Initialize LLM via central Model Factory
+llm = get_llm()
 
 
 def writer_node(state: AgentState) -> dict[str, Any]:
@@ -62,7 +56,7 @@ Include:
     full_conversation, new_summary = prepare_summarized_messages(state)
     full_prompt = [synthesis_instruction] + full_conversation[1:]
 
-    print("   └─ Invoking Ollama LLM to synthesize final report...")
+    print("   └─ Invoking configured LLM model to synthesize final report...")
     response = llm.invoke(full_prompt)
     report_content = response.content
     print("   └─ ✅ Research report generation complete.")

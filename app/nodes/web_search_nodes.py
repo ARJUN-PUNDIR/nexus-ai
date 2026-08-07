@@ -4,19 +4,14 @@ Web Search & Quality Reflection Nodes for Nexus AI
 
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
-from langchain_ollama import ChatOllama
 
 from app.graph.state import AgentState
 from app.tools import web_search_tool
-from app.config.settings import OLLAMA_MODEL, OLLAMA_BASE_URL, TEMPERATURE
+from app.config import get_llm
 
 
-# Initialize Ollama LLM
-llm = ChatOllama(
-    model=OLLAMA_MODEL,
-    base_url=OLLAMA_BASE_URL,
-    temperature=TEMPERATURE,
-)
+# Initialize LLM via central Model Factory
+llm = get_llm()
 
 
 def planner_node(state: AgentState) -> dict[str, Any]:

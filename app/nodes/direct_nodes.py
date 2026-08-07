@@ -4,19 +4,13 @@ Direct Chat & 4-Way Intent Classifier Nodes for Nexus AI
 
 from typing import Any
 from langchain_core.messages import AIMessage
-from langchain_ollama import ChatOllama
-
 from app.graph.state import AgentState
+from app.config import get_llm
 from app.utils.memory_summarizer import prepare_summarized_messages
-from app.config.settings import OLLAMA_MODEL, OLLAMA_BASE_URL, TEMPERATURE
 
 
-# Initialize Ollama LLM
-llm = ChatOllama(
-    model=OLLAMA_MODEL,
-    base_url=OLLAMA_BASE_URL,
-    temperature=TEMPERATURE,
-)
+# Initialize LLM via central Model Factory
+llm = get_llm()
 
 
 def route_query(state: AgentState) -> str:

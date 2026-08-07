@@ -4,17 +4,11 @@ Token-Efficient Conversation Memory Summarizer for Nexus AI
 
 from typing import Any
 from langchain_core.messages import SystemMessage
-from langchain_ollama import ChatOllama
-
 from app.graph.state import AgentState
-from app.config.settings import OLLAMA_MODEL, OLLAMA_BASE_URL, TEMPERATURE
+from app.config import get_llm
 
 
-llm = ChatOllama(
-    model=OLLAMA_MODEL,
-    base_url=OLLAMA_BASE_URL,
-    temperature=TEMPERATURE,
-)
+llm = get_llm()
 
 SYSTEM_PROMPT = """You are Nexus AI, an autonomous multi-agent research assistant.
 You have stateful conversational memory. Always remember user details, facts, and context from previous turns in the conversation thread."""
