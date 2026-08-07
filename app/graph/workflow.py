@@ -1,17 +1,17 @@
 """
-Nexus AI Multi-Node Graph Workflow with State Summarization & Parallel Search
+Nexus AI Multi-Node Graph Workflow with Persistent SQLite Checkpointer
 """
 
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.memory import MemorySaver
 from langchain_ollama import ChatOllama
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from app.graph.state import AgentState
 from app.tools import web_search_tool
 from app.config.settings import OLLAMA_MODEL, OLLAMA_BASE_URL, TEMPERATURE
+from app.utils.memory_saver import get_sqlite_checkpointer
 
 
 # Initialize Ollama LLM
@@ -21,8 +21,8 @@ llm = ChatOllama(
     temperature=TEMPERATURE,
 )
 
-# Initialize LangGraph Checkpointer Memory
-memory = MemorySaver()
+# Initialize Persistent SQLite Checkpointer Memory (survives app restarts)
+memory = get_sqlite_checkpointer("nexus_memory.db")
 
 # Default System Prompt for Nexus AI
 SYSTEM_PROMPT = """You are Nexus AI, an autonomous multi-agent research assistant.
@@ -246,7 +246,6 @@ Include:
 """
     )
 
-    # Get token-efficient summarized prompt sequence
     full_conversation, new_summary = prepare_summarized_messages(state)
     full_prompt = [synthesis_instruction] + full_conversation[1:]
 
@@ -263,7 +262,7 @@ Include:
 
 
 # ---------------------------------------------------------
-# Build LangGraph Workflow
+# Build LangGraph Workflow with Persistent SQLite Checkpointer
 # ---------------------------------------------------------
 
 builder = StateGraph(AgentState)
@@ -288,4 +287,5 @@ builder.add_edge("searcher", "writer")
 builder.add_edge("writer", END)
 builder.add_edge("direct_responder", END)
 
+# Compile graph with persistent SqliteSaver memory
 graph = builder.compile(checkpointer=memory)

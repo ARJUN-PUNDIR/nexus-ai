@@ -45,3 +45,13 @@ reports/
 .vscode/
 
 .idea/
+
+# SQLite Databases & Memory Files
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+nexus_memory.db*
+
+# Generated Reports
+reports/
