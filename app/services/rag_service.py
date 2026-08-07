@@ -1,9 +1,10 @@
 """
-LangChain Document RAG Service for Nexus AI
-Handles document loading (PDF, Word, CSV, TXT), text splitting, Embeddings, and FAISS vector index storage.
+LangChain Document RAG Service for Nexus AI with 2-Stage FlashRank Re-Ranking
+Handles document loading (PDF, Word, CSV, TXT), text splitting, Embeddings, FAISS vector search, and FlashRank Re-Ranking.
 """
 
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -23,11 +24,25 @@ RAG_STORAGE_DIR = "rag_storage"
 DATA_DIR = "data"
 
 _vectorstore = None
+_reranker = None
 
 
 def get_embeddings():
     """Initializes embeddings model via central Model Factory."""
     return get_embedding_model()
+
+
+def get_reranker():
+    """Initializes local FlashRank ONNX cross-encoder re-ranker."""
+    global _reranker
+    if _reranker is None:
+        try:
+            from flashrank import Ranker
+        except ImportError:
+            sys.path.append("/Users/arjunsinghpundir/Desktop/langchain_mastery/myenv/lib/python3.14/site-packages")
+            from flashrank import Ranker
+        _reranker = Ranker(model_name="ms-marco-TinyBERT-L-2-v2")
+    return _reranker
 
 
 def load_single_document(file_path: str) -> list[Any]:
@@ -97,7 +112,9 @@ def ingest_documents_from_directory(directory_path: str = DATA_DIR) -> int:
 
 def query_rag_index(query: str, top_k: int = 4) -> list[SearchResultItem]:
     """
-    Queries local FAISS index and returns SearchResultItem list with source_type="document".
+    2-Stage RAG Search Pipeline:
+    - Stage 1: FAISS Similarity Search fetches top 12 candidate chunks.
+    - Stage 2: FlashRank Cross-Encoder Re-ranks candidates and selects top 4 best chunks.
     """
     global _vectorstore
 
@@ -115,19 +132,57 @@ def query_rag_index(query: str, top_k: int = 4) -> list[SearchResultItem]:
             RAG_STORAGE_DIR, embeddings, allow_dangerous_deserialization=True
         )
 
-    retrieved_docs = _vectorstore.similarity_search(query, k=top_k)
+    # Stage 1: Fetch candidate chunks from FAISS (12 items)
+    candidate_docs = _vectorstore.similarity_search(query, k=12)
 
-    results = []
-    for doc in retrieved_docs:
-        source_name = doc.metadata.get("source", "Local Document")
-        results.append(
-            SearchResultItem(
-                title=f"Document: {Path(source_name).name}",
-                url="",
-                content=doc.page_content,
-                source_type="document",
-                metadata=doc.metadata,
+    if not candidate_docs:
+        return []
+
+    # Stage 2: FlashRank Re-Ranking
+    try:
+        try:
+            from flashrank import RerankRequest
+        except ImportError:
+            sys.path.append("/Users/arjunsinghpundir/Desktop/langchain_mastery/myenv/lib/python3.14/site-packages")
+            from flashrank import RerankRequest
+
+        ranker = get_reranker()
+
+        passages = [
+            {"id": idx, "text": doc.page_content, "meta": doc.metadata}
+            for idx, doc in enumerate(candidate_docs)
+        ]
+
+        rerank_req = RerankRequest(query=query, passages=passages)
+        reranked_results = ranker.rerank(rerank_req)[:top_k]
+
+        results = []
+        for item in reranked_results:
+            meta = item.get("meta", {})
+            source_name = meta.get("source", "Local Document")
+            results.append(
+                SearchResultItem(
+                    title=f"Document (Re-ranked): {Path(source_name).name}",
+                    url="",
+                    content=item.get("text", ""),
+                    source_type="document",
+                    metadata=meta,
+                )
             )
-        )
+        return results
 
-    return results
+    except Exception as err:
+        print(f"⚠️ FlashRank fallback to FAISS ({err})")
+        results = []
+        for doc in candidate_docs[:top_k]:
+            source_name = doc.metadata.get("source", "Local Document")
+            results.append(
+                SearchResultItem(
+                    title=f"Document: {Path(source_name).name}",
+                    url="",
+                    content=doc.page_content,
+                    source_type="document",
+                    metadata=doc.metadata,
+                )
+            )
+        return results
