@@ -17,4 +17,4 @@ def test_route_query_direct_knowledge(mock_invoke):
 def test_route_query_search_needed(mock_invoke):
     mock_invoke.return_value = MagicMock(content="SEARCH")
     state = {"research_query": "Latest stock prices today 2026"}
-    assert route_query(state) == "searcher"
+    assert route_query(state) == "planner"
