@@ -1,5 +1,5 @@
 """
-Nexus AI Multi-Node Graph Workflow with Parallel Web Searches
+Nexus AI Multi-Node Graph Workflow with State Summarization & Parallel Search
 """
 
 from typing import Any
@@ -29,6 +29,49 @@ SYSTEM_PROMPT = """You are Nexus AI, an autonomous multi-agent research assistan
 You have stateful conversational memory. Always remember user details, facts, and context from previous turns in the conversation thread."""
 
 
+def prepare_summarized_messages(state: AgentState) -> tuple[list[Any], str]:
+    """
+    Helper function for Token-Efficient Memory:
+    1. If message history > 6 messages, condenses older turns into a 2-3 sentence running summary.
+    2. Keeps only the 4 most recent raw messages.
+    3. Combines System Prompt + Running Summary + Recent Messages to keep token usage low.
+    """
+    messages = list(state.get("messages", []))
+    existing_summary = state.get("summary", "")
+
+    # If history is getting long, summarize older messages to save tokens
+    if len(messages) > 6:
+        print("\n🧠 [MEMORY] Summarizing older conversation turns to save tokens...")
+        older_messages = messages[:-4]
+        older_text = "\n".join(f"{getattr(m, 'type', 'user')}: {getattr(m, 'content', '')}" for m in older_messages)
+
+        summarize_prompt = f"""Summarize key user details, names, and research topics from this conversation into a concise 2-3 sentence summary.
+
+Previous Summary: {existing_summary}
+Conversation History:
+{older_text}
+
+Output ONLY the updated 2-3 sentence summary:"""
+
+        try:
+            new_summary = llm.invoke(summarize_prompt).content.strip()
+            print(f"   └─ ✅ Compact Summary: '{new_summary}'")
+        except Exception:
+            new_summary = existing_summary
+    else:
+        new_summary = existing_summary
+
+    # Build prompt: System Message (with summary if present) + 4 recent messages
+    system_text = SYSTEM_PROMPT
+    if new_summary:
+        system_text += f"\n\n--- Running Summary of Previous Conversation ---\n{new_summary}"
+
+    recent_messages = messages[-4:] if len(messages) > 4 else messages
+    prompt_sequence = [SystemMessage(content=system_text)] + recent_messages
+
+    return prompt_sequence, new_summary
+
+
 def route_query(state: AgentState) -> str:
     """
     Step 1: LLM-as-a-Router Edge
@@ -37,7 +80,6 @@ def route_query(state: AgentState) -> str:
     messages = state.get("messages", [])
     query = state.get("research_query", "")
 
-    # If research_query is empty, extract latest user message content
     if not query and messages:
         last_msg = messages[-1]
         query = getattr(last_msg, "content", str(last_msg))
@@ -71,21 +113,20 @@ Output ONLY a single word: either SEARCH or DIRECT. Do not output anything else.
 def direct_responder_node(state: AgentState) -> dict[str, Any]:
     """
     Node: Direct Responder
-    Handles simple chat, greetings, and general knowledge directly without calling Tavily Search API.
+    Uses token-efficient conversation memory (System Prompt + Summary + Recent 4 Messages).
     """
-    messages = list(state.get("messages", []))
     query = state.get("research_query", "")
+    print(f"\n💬 [NODE: DirectResponder] Generating answer using summarized conversation memory...")
 
-    print(f"\n💬 [NODE: DirectResponder] Generating direct LLM response...")
-
-    # Pass full conversation history to maintain memory
-    full_conversation = [SystemMessage(content=SYSTEM_PROMPT)] + messages
+    # Get token-efficient summarized prompt sequence
+    full_conversation, new_summary = prepare_summarized_messages(state)
 
     response = llm.invoke(full_conversation)
     answer = response.content
     print("   └─ ✅ Direct answer generation complete.")
 
     return {
+        "summary": new_summary,
         "report": {"title": query, "content": answer},
         "messages": [AIMessage(content=answer)],
     }
@@ -111,7 +152,6 @@ Rules:
 
     try:
         response = llm.invoke(planner_prompt).content.strip()
-        # Clean lines to get list of search queries
         lines = [line.strip("- *1234567890. ") for line in response.split("\n") if line.strip()]
         sub_queries = [q for q in lines if len(q) > 3][:3]
 
@@ -132,8 +172,7 @@ Rules:
 
 def fetch_single_search(sub_query: str) -> dict[str, Any]:
     """
-    Helper function to execute a single web search for a sub-query.
-    Used concurrently in ThreadPoolExecutor.
+    Helper function to execute a single web search for a sub-query concurrently.
     """
     try:
         raw_results = web_search_tool.invoke(sub_query)
@@ -153,8 +192,7 @@ def fetch_single_search(sub_query: str) -> dict[str, Any]:
 def searcher_node(state: AgentState) -> dict[str, Any]:
     """
     Node: Web Searcher (PARALLEL EXECUTION)
-    Executes web searches for all sub-queries concurrently using ThreadPoolExecutor
-    to cut latency by ~70%.
+    Executes web searches for all sub-queries concurrently using ThreadPoolExecutor.
     """
     search_queries = state.get("search_queries", [])
     query = state.get("research_query", "")
@@ -164,7 +202,6 @@ def searcher_node(state: AgentState) -> dict[str, Any]:
 
     print(f"\n⚡ [NODE: Searcher] Executing {len(search_queries)} web searches IN PARALLEL...")
 
-    # Run all sub-query searches concurrently across parallel worker threads
     with ThreadPoolExecutor(max_workers=len(search_queries)) as executor:
         search_items = list(executor.map(fetch_single_search, search_queries))
 
@@ -178,16 +215,14 @@ def searcher_node(state: AgentState) -> dict[str, Any]:
 def writer_node(state: AgentState) -> dict[str, Any]:
     """
     Node: Report Writer
-    Synthesizes all search results from all sub-queries into a comprehensive Markdown report.
+    Synthesizes search results into Markdown report using token-efficient summarized memory.
     """
     query = state.get("research_query", "Research Topic")
     search_results = state.get("search_results", [])
-    messages = list(state.get("messages", []))
 
     print(f"\n✍️  [NODE: Writer] Synthesizing comprehensive research report for: '{query}'")
     print(f"   └─ Combining context from {len(search_results)} search sources...")
 
-    # Combine context strings from all sub-query searches
     context_blocks = []
     for item in search_results:
         title = item.get("title", "Web Source")
@@ -211,14 +246,17 @@ Include:
 """
     )
 
-    full_conversation = [synthesis_instruction] + messages
+    # Get token-efficient summarized prompt sequence
+    full_conversation, new_summary = prepare_summarized_messages(state)
+    full_prompt = [synthesis_instruction] + full_conversation[1:]
 
     print("   └─ Invoking Ollama LLM to synthesize final report...")
-    response = llm.invoke(full_conversation)
+    response = llm.invoke(full_prompt)
     report_content = response.content
     print("   └─ ✅ Research report generation complete.")
 
     return {
+        "summary": new_summary,
         "report": {"title": query, "content": report_content},
         "messages": [AIMessage(content=report_content)],
     }
@@ -230,7 +268,6 @@ Include:
 
 builder = StateGraph(AgentState)
 
-# Add all nodes to graph
 builder.add_node("direct_responder", direct_responder_node)
 builder.add_node("planner", planner_node)
 builder.add_node("searcher", searcher_node)
@@ -246,11 +283,9 @@ builder.add_conditional_edges(
     },
 )
 
-# Connect Research Pipeline Edges: Planner -> Searcher -> Writer -> END
 builder.add_edge("planner", "searcher")
 builder.add_edge("searcher", "writer")
 builder.add_edge("writer", END)
 builder.add_edge("direct_responder", END)
 
-# Compile graph with MemorySaver checkpointer
 graph = builder.compile(checkpointer=memory)

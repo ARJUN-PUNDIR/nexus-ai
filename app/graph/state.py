@@ -14,6 +14,7 @@ class AgentState(TypedDict, total=False):
     """
 
     messages: Annotated[Sequence[BaseMessage], add_messages]
+    summary: str
     research_query: str
     search_queries: list[str]
     search_results: list[dict[str, Any]]
