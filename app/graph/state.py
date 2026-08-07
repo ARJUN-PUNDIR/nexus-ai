@@ -18,4 +18,5 @@ class AgentState(TypedDict, total=False):
     research_query: str
     search_queries: list[str]
     search_results: list[dict[str, Any]]
+    reflection: dict[str, Any] | None
     report: dict[str, Any] | None

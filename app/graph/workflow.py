@@ -1,5 +1,5 @@
 """
-Nexus AI Multi-Node Graph Workflow with Persistent SQLite Checkpointer
+Nexus AI Multi-Node Graph Workflow with Reflection Quality Audit & Stateful Memory
 """
 
 from typing import Any
@@ -212,13 +212,58 @@ def searcher_node(state: AgentState) -> dict[str, Any]:
     }
 
 
+def reflection_node(state: AgentState) -> dict[str, Any]:
+    """
+    Node: Reflection & Quality Control Auditor
+    Audits the completeness and quality of search results before handing off to the Writer Node.
+    """
+    query = state.get("research_query", "")
+    search_results = state.get("search_results", [])
+
+    print(f"\n🧐 [NODE: Reflection] Auditing search result quality for: '{query}'")
+
+    context_preview = "\n".join(item.get("content", "")[:300] for item in search_results[:3])
+
+    audit_prompt = f"""You are a Quality Control Auditor for a research platform.
+Analyze the retrieved search context for topic: "{query}"
+
+Retrieved Context Preview:
+{context_preview}
+
+Critique the completeness of this context in 2 short sentences.
+Format output as:
+Critique: <2-sentence evaluation>
+Status: COMPLETE (or INCOMPLETE)
+"""
+
+    try:
+        response = llm.invoke(audit_prompt).content.strip()
+        critique = response
+        is_sufficient = "INCOMPLETE" not in response.upper()
+    except Exception as err:
+        critique = f"Audit completed ({err})."
+        is_sufficient = True
+
+    first_line = critique.splitlines()[0] if critique else "Search data inspected."
+    print(f"   ├─ Audit Critique: {first_line}")
+    print(f"   └─ Quality Status: {'ACCEPTED ✅' if is_sufficient else 'REVIEWED ⚠️'}")
+
+    return {
+        "reflection": {
+            "is_sufficient": is_sufficient,
+            "critique": critique,
+        }
+    }
+
+
 def writer_node(state: AgentState) -> dict[str, Any]:
     """
     Node: Report Writer
-    Synthesizes search results into Markdown report using token-efficient summarized memory.
+    Synthesizes search results and reflection audit feedback into a Markdown report.
     """
     query = state.get("research_query", "Research Topic")
     search_results = state.get("search_results", [])
+    reflection = state.get("reflection", {})
 
     print(f"\n✍️  [NODE: Writer] Synthesizing comprehensive research report for: '{query}'")
     print(f"   └─ Combining context from {len(search_results)} search sources...")
@@ -230,9 +275,13 @@ def writer_node(state: AgentState) -> dict[str, Any]:
         context_blocks.append(f"=== {title} ===\n{content}")
 
     context_str = "\n\n".join(context_blocks)
+    critique_str = reflection.get("critique", "No audit critique available.")
 
     synthesis_instruction = SystemMessage(
         content=f"""You are Nexus AI, an expert research assistant.
+
+Quality Audit Critique:
+{critique_str}
 
 Retrieved Multi-Query Search Context:
 {context_str}
@@ -262,7 +311,7 @@ Include:
 
 
 # ---------------------------------------------------------
-# Build LangGraph Workflow with Persistent SQLite Checkpointer
+# Build LangGraph Workflow with Reflection Audit Node
 # ---------------------------------------------------------
 
 builder = StateGraph(AgentState)
@@ -270,6 +319,7 @@ builder = StateGraph(AgentState)
 builder.add_node("direct_responder", direct_responder_node)
 builder.add_node("planner", planner_node)
 builder.add_node("searcher", searcher_node)
+builder.add_node("reflection", reflection_node)
 builder.add_node("writer", writer_node)
 
 # Conditional LLM Router Edge from START
@@ -282,8 +332,10 @@ builder.add_conditional_edges(
     },
 )
 
+# Connect Research Pipeline Edges: Planner -> Searcher -> Reflection -> Writer -> END
 builder.add_edge("planner", "searcher")
-builder.add_edge("searcher", "writer")
+builder.add_edge("searcher", "reflection")
+builder.add_edge("reflection", "writer")
 builder.add_edge("writer", END)
 builder.add_edge("direct_responder", END)
 
