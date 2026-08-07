@@ -1,5 +1,5 @@
 """
-Nexus AI Multi-Node Graph Workflow Definition with Smart 4-Way Intent Router
+Nexus AI Multi-Node Graph Workflow Definition with Human-in-the-Loop Approval
 """
 
 from langgraph.graph import StateGraph, START, END
@@ -14,6 +14,7 @@ from app.nodes.web_search_nodes import (
     reflection_node,
     route_reflection,
 )
+from app.nodes.human_nodes import plan_approval_node
 from app.nodes.rag_nodes import rag_search_node
 from app.nodes.writer_node import writer_node
 
@@ -34,15 +35,28 @@ def route_searcher(state: AgentState) -> str:
     return "reflection"
 
 
+def route_plan_approval(state: AgentState) -> str:
+    """
+    Conditional Edge after Plan Approval:
+    - If search_queries is empty (user cancelled) -> Route directly to Report Writer.
+    - Else -> Proceed to Parallel Web Searcher.
+    """
+    queries = state.get("search_queries", [])
+    if not queries:
+        return "writer"
+    return "searcher"
+
+
 # ---------------------------------------------------------
 # Build LangGraph Multi-Agent Workflow
 # ---------------------------------------------------------
 
 builder = StateGraph(AgentState)
 
-# Add Nodes
+# Add Domain Nodes
 builder.add_node("direct_responder", direct_responder_node)
 builder.add_node("planner", planner_node)
+builder.add_node("plan_approval", plan_approval_node)
 builder.add_node("searcher", searcher_node)
 builder.add_node("rag_searcher", rag_search_node)
 builder.add_node("reflection", reflection_node)
@@ -60,8 +74,18 @@ builder.add_conditional_edges(
     },
 )
 
-# Planner -> Searcher
-builder.add_edge("planner", "searcher")
+# Planner -> Human Plan Approval Node
+builder.add_edge("planner", "plan_approval")
+
+# Conditional Edge after Plan Approval: Cancelled goes to Writer, Approved goes to Searcher
+builder.add_conditional_edges(
+    "plan_approval",
+    route_plan_approval,
+    {
+        "searcher": "searcher",
+        "writer": "writer",
+    },
+)
 
 # Conditional Edge after Searcher: Hybrid goes to rag_searcher, Web goes to reflection
 builder.add_conditional_edges(

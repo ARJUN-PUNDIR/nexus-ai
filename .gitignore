@@ -1,63 +1,51 @@
-# ------------------------
-# Python
-# ------------------------
+# Virtual Environment
+myenv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Databases & Local Memory Checkpoints
+nexus_memory.db*
+*.db
+*.sqlite
+*.sqlite3
+*.bin
+
+# Local Vector Storage & Output Reports
+rag_storage/
+reports/*.md
+!reports/.gitkeep
+
+# Python Cache & Bytecode
 __pycache__/
 *.py[cod]
 *$py.class
-
-# ------------------------
-# Virtual Environment
-# ------------------------
-myenv/
-venv/
-.env
-
-# ------------------------
-# Pytest
-# ------------------------
 .pytest_cache/
+.coverage
+htmlcov/
+*.manifest
+*.spec
 
-# ------------------------
-# Reports
-# ------------------------
-reports/
+# Temporary files & Scratch scripts
+temp.py
+scratch/
 
-# ------------------------
-# macOS
-# ------------------------
+# System & IDE files
 .DS_Store
-
-# ------------------------
-# VS Code
-# ------------------------
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .vscode/
-
-__pycache__/
-
-.env
-
-reports/
-
-*.pyc
-
-.DS_Store
-
-.vscode/
-
 .idea/
+*.swp
+*.swo
 
-# SQLite Databases & Memory Files
-*.db
-*.db-wal
-*.db-shm
-*.sqlite
-nexus_memory.db*
-
-# Generated Reports
-reports/
-
-data/
-
-rag_storage/
-tests/
-nexus_memory.db/
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*
