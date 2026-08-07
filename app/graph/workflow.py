@@ -1,5 +1,5 @@
 """
-Nexus AI Multi-Node Graph Workflow with Reflection Quality Audit & Stateful Memory
+Nexus AI Multi-Node Graph Workflow with Reflection Re-Search Loop & Stateful Memory
 """
 
 from typing import Any
@@ -39,7 +39,6 @@ def prepare_summarized_messages(state: AgentState) -> tuple[list[Any], str]:
     messages = list(state.get("messages", []))
     existing_summary = state.get("summary", "")
 
-    # If history is getting long, summarize older messages to save tokens
     if len(messages) > 6:
         print("\n🧠 [MEMORY] Summarizing older conversation turns to save tokens...")
         older_messages = messages[:-4]
@@ -61,7 +60,6 @@ Output ONLY the updated 2-3 sentence summary:"""
     else:
         new_summary = existing_summary
 
-    # Build prompt: System Message (with summary if present) + 4 recent messages
     system_text = SYSTEM_PROMPT
     if new_summary:
         system_text += f"\n\n--- Running Summary of Previous Conversation ---\n{new_summary}"
@@ -118,7 +116,6 @@ def direct_responder_node(state: AgentState) -> dict[str, Any]:
     query = state.get("research_query", "")
     print(f"\n💬 [NODE: DirectResponder] Generating answer using summarized conversation memory...")
 
-    # Get token-efficient summarized prompt sequence
     full_conversation, new_summary = prepare_summarized_messages(state)
 
     response = llm.invoke(full_conversation)
@@ -167,6 +164,7 @@ Rules:
 
     return {
         "search_queries": sub_queries,
+        "search_loop_count": 0,
     }
 
 
@@ -193,8 +191,10 @@ def searcher_node(state: AgentState) -> dict[str, Any]:
     """
     Node: Web Searcher (PARALLEL EXECUTION)
     Executes web searches for all sub-queries concurrently using ThreadPoolExecutor.
+    Appends new search results to existing results.
     """
     search_queries = state.get("search_queries", [])
+    existing_results = list(state.get("search_results", []))
     query = state.get("research_query", "")
 
     if not search_queries:
@@ -203,24 +203,26 @@ def searcher_node(state: AgentState) -> dict[str, Any]:
     print(f"\n⚡ [NODE: Searcher] Executing {len(search_queries)} web searches IN PARALLEL...")
 
     with ThreadPoolExecutor(max_workers=len(search_queries)) as executor:
-        search_items = list(executor.map(fetch_single_search, search_queries))
+        new_items = list(executor.map(fetch_single_search, search_queries))
 
-    print(f"   └─ ✅ All {len(search_items)} parallel searches finished concurrently.")
+    combined_results = existing_results + new_items
+    print(f"   └─ ✅ {len(new_items)} searches finished concurrently. Total sources collected: {len(combined_results)}.")
 
     return {
-        "search_results": search_items,
+        "search_results": combined_results,
     }
 
 
 def reflection_node(state: AgentState) -> dict[str, Any]:
     """
     Node: Reflection & Quality Control Auditor
-    Audits the completeness and quality of search results before handing off to the Writer Node.
+    Audits search result quality. If incomplete, generates targeted supplementary queries for re-search.
     """
     query = state.get("research_query", "")
     search_results = state.get("search_results", [])
+    loop_count = state.get("search_loop_count", 0) + 1
 
-    print(f"\n🧐 [NODE: Reflection] Auditing search result quality for: '{query}'")
+    print(f"\n🧐 [NODE: Reflection] Auditing search result quality (Pass #{loop_count}) for: '{query}'")
 
     context_preview = "\n".join(item.get("content", "")[:300] for item in search_results[:3])
 
@@ -246,14 +248,43 @@ Status: COMPLETE (or INCOMPLETE)
 
     first_line = critique.splitlines()[0] if critique else "Search data inspected."
     print(f"   ├─ Audit Critique: {first_line}")
-    print(f"   └─ Quality Status: {'ACCEPTED ✅' if is_sufficient else 'REVIEWED ⚠️'}")
+    print(f"   └─ Quality Status: {'ACCEPTED ✅' if is_sufficient else 'INCOMPLETE ⚠️ (Re-search requested)'}")
+
+    supplementary_queries = []
+    if not is_sufficient and loop_count < 2:
+        print("   └─ 🔄 Generating targeted supplementary sub-queries for missing gaps...")
+        supp_prompt = f"Topic: '{query}'. Search context is missing details. Output 2 specific sub-queries for web search, one per line:"
+        try:
+            supp_resp = llm.invoke(supp_prompt).content.strip()
+            supplementary_queries = [q.strip("- *1234567890. ") for q in supp_resp.split("\n") if len(q.strip()) > 3][:2]
+        except Exception:
+            supplementary_queries = [f"{query} latest technical details"]
 
     return {
+        "search_loop_count": loop_count,
+        "search_queries": supplementary_queries if supplementary_queries else state.get("search_queries", []),
         "reflection": {
             "is_sufficient": is_sufficient,
             "critique": critique,
-        }
+        },
     }
+
+
+def route_reflection(state: AgentState) -> str:
+    """
+    Conditional Edge: Decides whether to trigger a supplementary re-search loop
+    or proceed to the Writer Node.
+    """
+    reflection = state.get("reflection", {})
+    loop_count = state.get("search_loop_count", 0)
+    is_sufficient = reflection.get("is_sufficient", True)
+
+    if not is_sufficient and loop_count < 2:
+        print(f"\n🔄 [ROUTER: Reflection] Context INCOMPLETE after Pass #{loop_count}. Triggering Supplementary Search Loop! 🔄")
+        return "searcher"
+
+    print(f"\n✅ [ROUTER: Reflection] Quality criteria met (or max 2 loops reached). Proceeding to Report Writer.")
+    return "writer"
 
 
 def writer_node(state: AgentState) -> dict[str, Any]:
@@ -311,7 +342,7 @@ Include:
 
 
 # ---------------------------------------------------------
-# Build LangGraph Workflow with Reflection Audit Node
+# Build LangGraph Workflow with Reflection Re-Search Loop
 # ---------------------------------------------------------
 
 builder = StateGraph(AgentState)
@@ -332,10 +363,20 @@ builder.add_conditional_edges(
     },
 )
 
-# Connect Research Pipeline Edges: Planner -> Searcher -> Reflection -> Writer -> END
+# Research Pipeline: Planner -> Searcher -> Reflection
 builder.add_edge("planner", "searcher")
 builder.add_edge("searcher", "reflection")
-builder.add_edge("reflection", "writer")
+
+# Conditional Reflection Edge: Loop back to Searcher if INCOMPLETE, else proceed to Writer
+builder.add_conditional_edges(
+    "reflection",
+    route_reflection,
+    {
+        "searcher": "searcher",
+        "writer": "writer",
+    },
+)
+
 builder.add_edge("writer", END)
 builder.add_edge("direct_responder", END)
 

@@ -19,4 +19,5 @@ class AgentState(TypedDict, total=False):
     search_queries: list[str]
     search_results: list[dict[str, Any]]
     reflection: dict[str, Any] | None
+    search_loop_count: int
     report: dict[str, Any] | None
