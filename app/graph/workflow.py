@@ -1,5 +1,5 @@
 """
-Nexus AI Multi-Node Graph Workflow Definition
+Nexus AI Multi-Node Graph Workflow Definition with Smart 4-Way Intent Router
 """
 
 from langgraph.graph import StateGraph, START, END
@@ -7,7 +7,6 @@ from langgraph.graph import StateGraph, START, END
 from app.graph.state import AgentState
 from app.utils.memory_saver import get_sqlite_checkpointer
 
-# Import Domain-Grouped Graph Nodes directly from sub-modules
 from app.nodes.direct_nodes import route_query, direct_responder_node
 from app.nodes.web_search_nodes import (
     planner_node,
@@ -21,6 +20,19 @@ from app.nodes.writer_node import writer_node
 
 # Initialize Persistent SQLite Checkpointer Memory
 memory = get_sqlite_checkpointer("nexus_memory.db")
+
+
+def route_searcher(state: AgentState) -> str:
+    """
+    Conditional Edge after Web Searcher Node:
+    - If research_mode == 'hybrid' -> Route to Local RAG Searcher Node next.
+    - Else (web only) -> Route straight to Reflection Audit Node.
+    """
+    mode = state.get("research_mode", "web")
+    if mode == "hybrid":
+        return "rag_searcher"
+    return "reflection"
+
 
 # ---------------------------------------------------------
 # Build LangGraph Multi-Agent Workflow
@@ -36,20 +48,32 @@ builder.add_node("rag_searcher", rag_search_node)
 builder.add_node("reflection", reflection_node)
 builder.add_node("writer", writer_node)
 
-# Conditional LLM Router Edge from START
+# Conditional 4-Way Router Edge from START
 builder.add_conditional_edges(
     START,
     route_query,
     {
-        "planner": "planner",
         "direct_responder": "direct_responder",
+        "doc_searcher": "rag_searcher",
+        "web_planner": "planner",
+        "hybrid_planner": "planner",
     },
 )
 
-# Research Pipeline Edges:
-# Planner -> Parallel Web Searcher -> Local FAISS Document RAG Searcher -> Reflection Audit
+# Planner -> Searcher
 builder.add_edge("planner", "searcher")
-builder.add_edge("searcher", "rag_searcher")
+
+# Conditional Edge after Searcher: Hybrid goes to rag_searcher, Web goes to reflection
+builder.add_conditional_edges(
+    "searcher",
+    route_searcher,
+    {
+        "rag_searcher": "rag_searcher",
+        "reflection": "reflection",
+    },
+)
+
+# Local RAG Searcher -> Reflection
 builder.add_edge("rag_searcher", "reflection")
 
 # Conditional Reflection Edge: Loop back to Searcher if INCOMPLETE, else proceed to Writer

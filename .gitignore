@@ -55,3 +55,9 @@ nexus_memory.db*
 
 # Generated Reports
 reports/
+
+data/
+
+rag_storage/
+tests/
+nexus_memory.db/

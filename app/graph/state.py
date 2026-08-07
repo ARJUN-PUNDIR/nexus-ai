@@ -16,6 +16,7 @@ class AgentState(TypedDict, total=False):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     summary: str
     research_query: str
+    research_mode: str  # "direct", "web", "doc", or "hybrid"
     search_queries: list[str]
     search_results: list[dict[str, Any]]
     reflection: dict[str, Any] | None

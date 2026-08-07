@@ -1,5 +1,5 @@
 """
-Direct Chat & Intent Classifier Nodes for Nexus AI
+Direct Chat & 4-Way Intent Classifier Nodes for Nexus AI
 """
 
 from typing import Any
@@ -21,8 +21,12 @@ llm = ChatOllama(
 
 def route_query(state: AgentState) -> str:
     """
-    Step 1: LLM-as-a-Router Edge
-    Decides whether the query requires external web search, local document RAG, or direct response.
+    Step 1: Smart 4-Way LLM Router Edge
+    Classifies prompt into 1 of 4 clean routes:
+    - DIRECT: Greetings, personal details, memory recall, general knowledge, math, coding.
+    - WEB: Current news, live web data, online research.
+    - DOC: Questions about local uploaded files, PDFs, CSVs, documents.
+    - HYBRID: Prompts needing BOTH local uploaded docs AND live web news.
     """
     messages = state.get("messages", [])
     query = state.get("research_query", "")
@@ -33,28 +37,41 @@ def route_query(state: AgentState) -> str:
 
     print(f"\n🤔 [ROUTER: LLM] Analyzing intent for: '{query}'")
 
-    router_prompt = f"""You are a query classifier for an AI research platform.
-Analyze the user prompt below and decide if answering it REQUIRES real-time external web search (e.g. current news, stock prices, live weather, latest tech announcements, specific external articles).
+    router_prompt = f"""You are an intent classifier for an AI research platform.
+Analyze the user prompt below and choose the SINGLE BEST route:
 
-If the prompt is a greeting, personal detail (e.g. telling name), memory recall, general knowledge, math, or coding, choose 'DIRECT'.
-If the prompt explicitly requires up-to-date web search or recent external information, choose 'SEARCH'.
+- 'DIRECT': Greeting, telling name, memory recall, general knowledge, math, coding.
+- 'WEB': Requires current news, stock prices, live weather, external tech articles, internet search.
+- 'DOC': Asks specifically about local uploaded files, PDFs, CSVs, data documents.
+- 'HYBRID': Asks to compare/combine local uploaded files WITH external live web news.
 
 User Prompt: "{query}"
 
-Output ONLY a single word: either SEARCH or DIRECT. Do not output anything else.
+Output ONLY a single word: DIRECT, WEB, DOC, or HYBRID. Do not output anything else.
 """
 
     try:
         decision = llm.invoke(router_prompt).content.strip().upper()
-        if "SEARCH" in decision:
-            print("   └─ 🌐 Decision: SEARCH required. Routing to Autonomous Planner Node.")
-            return "planner"
+        if "DOC" in decision:
+            print("   └─ 📚 Decision: DOC required (Local RAG). Routing directly to RAG Node (0 Web API calls).")
+            state["research_mode"] = "doc"
+            return "doc_searcher"
+        elif "HYBRID" in decision:
+            print("   └─ 🔀 Decision: HYBRID required (Web + Local Docs). Routing to Planner Node.")
+            state["research_mode"] = "hybrid"
+            return "hybrid_planner"
+        elif "WEB" in decision or "SEARCH" in decision:
+            print("   └─ 🌐 Decision: WEB required. Routing to Planner Node.")
+            state["research_mode"] = "web"
+            return "web_planner"
         else:
             print("   └─ 💡 Decision: DIRECT answer sufficient. Routing to Direct Responder Node.")
+            state["research_mode"] = "direct"
             return "direct_responder"
     except Exception as err:
-        print(f"   └─ ⚠️ Router warning ({err}). Defaulting to PLANNER.")
-        return "planner"
+        print(f"   └─ ⚠️ Router warning ({err}). Defaulting to WEB.")
+        state["research_mode"] = "web"
+        return "web_planner"
 
 
 def direct_responder_node(state: AgentState) -> dict[str, Any]:
